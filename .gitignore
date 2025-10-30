@@ -1,24 +1,48 @@
-# Compiled class file
-*.class
+# Gradle
+.gradle/
+build/
+*.iml
 
-# Log file
+# IntelliJ IDEA
+.idea/
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs
 *.log
+logs/
 
-# BlueJ files
-*.ctxt
+# Application local config (user-specific, keep template)
+# application-local.yml
+# application-local.properties
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+# Docker
+*.swp
+*.swo
+*~
 
-# Package Files #
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
+# Environment
+.env
+.env.local
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# Prometheus local data
+prometheus-data/
+prometheus-*/
