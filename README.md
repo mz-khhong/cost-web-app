@@ -185,6 +185,31 @@ sudo systemctl start cost-web-app
 
 또는 수동 설치 방법은 `EC2_DIRECT_INSTALL.md` 문서를 참조하세요.
 
+## AWS Lightsail 서버 초기 설정 (추천)
+
+AWS Lightsail은 EC2보다 간단한 인터페이스와 고정 요금제를 제공하는 가상 프라이빗 서버(VPS) 서비스입니다.
+
+### Lightsail의 장점
+
+- **간단한 관리**: 직관적인 웹 콘솔 인터페이스
+- **고정 요금제**: 월별 고정 비용 ($5-10/월)으로 예측 가능한 가격
+- **내장 백업**: 스냅샷 및 자동 백업 기능 내장
+- **빠른 설정**: 몇 분 내에 인스턴스 생성 및 배포 가능
+
+### Lightsail 배포 가이드
+
+**상세 가이드**: [AWS Lightsail 인스턴스 관리 가이드](AWS_LIGHTSAIL_GUIDE.md) 참조
+
+주요 단계:
+1. Lightsail 콘솔에서 Ubuntu 인스턴스 생성
+2. SSH 접속 및 초기 설정 스크립트 실행
+3. 방화벽 설정 (포트 8080, 9090, 3000)
+4. GitHub Actions 자동 배포 설정
+
+EC2와 비교:
+- **EC2**: 더 많은 옵션과 고급 기능, 사용량 기반 요금
+- **Lightsail**: 간단한 인터페이스, 고정 요금, 빠른 설정 (추천)
+
 ## 모니터링 설정
 
 ### Prometheus 메트릭 수집
