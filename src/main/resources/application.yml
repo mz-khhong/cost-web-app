@@ -6,6 +6,12 @@ server:
 spring:
   application:
     name: cost-web-app
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false  # 개발 중에는 false, 프로덕션에서는 true
 
 management:
   endpoints:

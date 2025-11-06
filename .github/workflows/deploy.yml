@@ -32,19 +32,57 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_DEV }}
           source: build/libs/*.jar
-          target: /home/ubuntu/cost-web-app/build/libs/  # 경로 수정
+          target: /home/ubuntu/cost-web-app/
 
-      - name: Restart Service on Server
+      - name: Setup and Restart Service on Server
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST_DEV }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_DEV }}
           script: |
+            # JAR 파일을 올바른 위치로 이동
+            mkdir -p /home/ubuntu/cost-web-app/build/libs
+            mv /home/ubuntu/cost-web-app/*.jar /home/ubuntu/cost-web-app/build/libs/ 2>/dev/null || true
+            
+            # systemd 서비스 파일이 없으면 생성
+            if [ ! -f /etc/systemd/system/cost-web-app.service ]; then
+              echo "=== Creating systemd service file ==="
+              sudo tee /etc/systemd/system/cost-web-app.service > /dev/null <<'SERVICEEOF'
+            [Unit]
+            Description=Cost Web App
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=ubuntu
+            WorkingDirectory=/home/ubuntu/cost-web-app
+            ExecStart=/usr/bin/java -jar /home/ubuntu/cost-web-app/build/libs/cost-web-app-0.0.1-SNAPSHOT.jar
+            Restart=always
+            RestartSec=10
+            StandardOutput=journal
+            StandardError=journal
+
+            Environment="SERVER_PORT=8080"
+
+            [Install]
+            WantedBy=multi-user.target
+            SERVICEEOF
+              sudo systemctl daemon-reload
+              sudo systemctl enable cost-web-app
+              echo "Service file created and enabled"
+            else
+              echo "Service file already exists, skipping creation"
+            fi
+            
+            # 서비스 재시작
             sudo systemctl restart cost-web-app
-            sleep 1
+            sleep 5
             echo "=== Service Status ==="
-            sudo systemctl status cost-web-app --no-pager
+            sudo systemctl status cost-web-app --no-pager | head -20
+            echo ""
             echo "=== Health Check ==="
             curl -f http://localhost:8080/api/health || exit 1
+            echo ""
+            echo "=== Deployment completed successfully ==="
 
