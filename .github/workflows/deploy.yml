@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Deploy to Lightsail
 
 on:
   push:
@@ -25,12 +25,26 @@ jobs:
           echo "=== build/libs directory structure ==="
           ls -R build/libs || echo "build/libs not found"
 
-      - name: Deploy to Server
+      - name: Deploy to Lightsail Server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST_DEV }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_DEV }}
           source: build/libs/*.jar
-          target: /home/ubuntu/app/
+          target: /home/ubuntu/cost-web-app/build/libs/  # 경로 수정
+
+      - name: Restart Service on Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST_DEV }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY_DEV }}
+          script: |
+            sudo systemctl restart cost-web-app
+            sleep 1
+            echo "=== Service Status ==="
+            sudo systemctl status cost-web-app --no-pager
+            echo "=== Health Check ==="
+            curl -f http://localhost:8080/api/health || exit 1
 

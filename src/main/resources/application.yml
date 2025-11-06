@@ -1,12 +1,11 @@
 
 server:
   port: 8080
+  address: 0.0.0.0  # 모든 네트워크 인터페이스에 바인딩 (외부 접속 허용)
 
 spring:
   application:
     name: cost-web-app
-  profiles:
-    active: local
 
 management:
   endpoints:
