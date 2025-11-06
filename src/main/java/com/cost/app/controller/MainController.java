@@ -102,6 +102,11 @@ public class MainController {
         return "components/prometheus";
     }
 
+    @GetMapping("/components/logs")
+    public String logsComponent() {
+        return "components/logs";
+    }
+
     @PostMapping("/login")
     public String login(
             @RequestParam String username,
