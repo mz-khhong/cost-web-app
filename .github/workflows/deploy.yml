@@ -20,6 +20,14 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew clean build -x test
+      - name: Rename JAR with deployment number
+        run: |
+          JAR_FILE=$(ls build/libs/cost-web-app-*.jar | grep -v plain | head -1)
+          if [ -n "$JAR_FILE" ]; then
+            NEW_NAME="cost-web-app-0.0.1-SNAPSHOT-${{ github.run_number }}.jar"
+            mv "$JAR_FILE" "build/libs/$NEW_NAME"
+            echo "Renamed to: $NEW_NAME"
+          fi
       - name: Debug build folder
         run: |
           echo "=== build/libs directory structure ==="
@@ -31,7 +39,7 @@ jobs:
           host: ${{ secrets.EC2_HOST_DEV }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_DEV }}
-          source: build/libs/*.jar
+          source: build/libs/cost-web-app-*.jar
           target: /home/ubuntu/cost-web-app/
 
       - name: Setup and Restart Service on Server
@@ -41,17 +49,35 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_DEV }}
           script: |
+            # 디버깅: 전송된 파일 확인
+            echo "=== Checking transferred files ==="
+            ls -la /home/ubuntu/cost-web-app/*.jar 2>/dev/null || echo "No jar files found in root"
+            
             # JAR 파일을 올바른 위치로 이동
             mkdir -p /home/ubuntu/cost-web-app/build/libs
-            # 기존 JAR 파일 제거 (중복 방지)
-            rm -f /home/ubuntu/cost-web-app/build/libs/*.jar
-            # 새 JAR 파일 이동
-            mv /home/ubuntu/cost-web-app/*.jar /home/ubuntu/cost-web-app/build/libs/ 2>/dev/null || true
             
-            # JAR 파일 확인
-            JAR_FILE=$(ls /home/ubuntu/cost-web-app/build/libs/*.jar 2>/dev/null | head -1)
+            # 기존 JAR 파일 모두 제거 (중복 방지)
+            rm -f /home/ubuntu/cost-web-app/build/libs/*.jar
+            
+            # 새 JAR 파일 찾기 (배포 번호가 포함된 JAR 파일)
+            # 파일명 형식: cost-web-app-0.0.1-SNAPSHOT-{배포번호}.jar
+            JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "cost-web-app-*.jar" -type f 2>/dev/null | head -1)
+            
+            if [ -n "$JAR_SOURCE" ]; then
+              echo "Found JAR file: $JAR_SOURCE"
+              # 새 JAR 파일 이동
+              mv "$JAR_SOURCE" /home/ubuntu/cost-web-app/build/libs/
+              echo "JAR file moved to build/libs/"
+            else
+              echo "WARNING: JAR file not found in root, checking build/libs/"
+            fi
+            
+            # JAR 파일 확인 (최종 위치)
+            JAR_FILE=$(find /home/ubuntu/cost-web-app/build/libs -name "cost-web-app-*.jar" -type f 2>/dev/null | head -1)
             if [ -z "$JAR_FILE" ]; then
-              echo "ERROR: JAR file not found!"
+              echo "ERROR: JAR file not found in build/libs/"
+              echo "Files in build/libs/:"
+              ls -la /home/ubuntu/cost-web-app/build/libs/ || echo "Directory does not exist"
               exit 1
             fi
             echo "JAR file found: $JAR_FILE"
