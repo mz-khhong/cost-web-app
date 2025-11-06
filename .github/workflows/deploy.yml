@@ -43,12 +43,22 @@ jobs:
           script: |
             # JAR 파일을 올바른 위치로 이동
             mkdir -p /home/ubuntu/cost-web-app/build/libs
+            # 기존 JAR 파일 제거 (중복 방지)
+            rm -f /home/ubuntu/cost-web-app/build/libs/*.jar
+            # 새 JAR 파일 이동
             mv /home/ubuntu/cost-web-app/*.jar /home/ubuntu/cost-web-app/build/libs/ 2>/dev/null || true
             
-            # systemd 서비스 파일이 없으면 생성
-            if [ ! -f /etc/systemd/system/cost-web-app.service ]; then
-              echo "=== Creating systemd service file ==="
-              sudo tee /etc/systemd/system/cost-web-app.service > /dev/null <<'SERVICEEOF'
+            # JAR 파일 확인
+            JAR_FILE=$(ls /home/ubuntu/cost-web-app/build/libs/*.jar 2>/dev/null | head -1)
+            if [ -z "$JAR_FILE" ]; then
+              echo "ERROR: JAR file not found!"
+              exit 1
+            fi
+            echo "JAR file found: $JAR_FILE"
+            
+            # systemd 서비스 파일 생성 또는 업데이트
+            echo "=== Creating/Updating systemd service file ==="
+            sudo tee /etc/systemd/system/cost-web-app.service > /dev/null <<SERVICEEOF
             [Unit]
             Description=Cost Web App
             After=network.target
@@ -57,7 +67,7 @@ jobs:
             Type=simple
             User=ubuntu
             WorkingDirectory=/home/ubuntu/cost-web-app
-            ExecStart=/usr/bin/java -jar /home/ubuntu/cost-web-app/build/libs/cost-web-app-0.0.1-SNAPSHOT.jar
+            ExecStart=/usr/bin/java -jar $JAR_FILE
             Restart=always
             RestartSec=10
             StandardOutput=journal
@@ -68,16 +78,29 @@ jobs:
             [Install]
             WantedBy=multi-user.target
             SERVICEEOF
-              sudo systemctl daemon-reload
-              sudo systemctl enable cost-web-app
-              echo "Service file created and enabled"
-            else
-              echo "Service file already exists, skipping creation"
-            fi
+            
+            # 항상 daemon-reload 실행 (서비스 파일 변경 시)
+            sudo systemctl daemon-reload
+            sudo systemctl enable cost-web-app
             
             # 서비스 재시작
             sudo systemctl restart cost-web-app
-            sleep 5
+            
+            # 애플리케이션 시작 대기 (최대 30초)
+            echo "Waiting for application to start..."
+            for i in {1..30}; do
+              if curl -s http://localhost:8080/api/health > /dev/null 2>&1; then
+                echo "Application is ready!"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "ERROR: Application failed to start within 30 seconds"
+                sudo systemctl status cost-web-app --no-pager
+                exit 1
+              fi
+              sleep 1
+            done
+            
             echo "=== Service Status ==="
             sudo systemctl status cost-web-app --no-pager | head -20
             echo ""
