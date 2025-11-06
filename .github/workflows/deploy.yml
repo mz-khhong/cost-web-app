@@ -59,7 +59,9 @@ jobs:
           host: ${{ secrets.EC2_HOST_DEV }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_DEV }}
+          envs: DEPLOY_NUMBER=${{ github.run_number }}
           script: |
+            echo "=== Deployment number: $DEPLOY_NUMBER ==="
             # 디버깅: 전송된 파일 확인
             echo "=== Checking transferred files ==="
             echo "Files in root directory:"
@@ -79,8 +81,17 @@ jobs:
             # 새 JAR 파일 찾기 (배포 번호가 포함된 JAR 파일 우선)
             # 파일명 형식: cost-web-app-0.0.1-SNAPSHOT-{배포번호}.jar
             echo ""
-            echo "=== Looking for deployment numbered JAR ==="
-            JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "cost-web-app-0.0.1-SNAPSHOT-*.jar" -type f 2>/dev/null | grep -v plain | head -1)
+            echo "=== Looking for deployment numbered JAR (Number: $DEPLOY_NUMBER) ==="
+            
+            # 배포 번호로 정확한 파일명 찾기
+            EXPECTED_JAR="cost-web-app-0.0.1-SNAPSHOT-${DEPLOY_NUMBER}.jar"
+            JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "$EXPECTED_JAR" -type f 2>/dev/null | head -1)
+            
+            # 정확한 파일명이 없으면 패턴으로 찾기
+            if [ -z "$JAR_SOURCE" ]; then
+              echo "Exact file not found, searching by pattern..."
+              JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "cost-web-app-0.0.1-SNAPSHOT-*.jar" -type f 2>/dev/null | grep -v plain | head -1)
+            fi
             
             # 배포 번호가 포함된 파일이 없으면 일반 파일 찾기
             if [ -z "$JAR_SOURCE" ]; then
@@ -100,8 +111,17 @@ jobs:
             # JAR 파일 확인 (최종 위치)
             # 배포 번호가 포함된 파일 우선, 없으면 일반 파일
             echo ""
-            echo "=== Finding JAR file for service ==="
-            JAR_FILE=$(find /home/ubuntu/cost-web-app/build/libs -name "cost-web-app-0.0.1-SNAPSHOT-*.jar" -type f 2>/dev/null | grep -v plain | head -1)
+            echo "=== Finding JAR file for service (Expected: $EXPECTED_JAR) ==="
+            
+            # 배포 번호로 정확한 파일명 찾기
+            JAR_FILE=$(find /home/ubuntu/cost-web-app/build/libs -name "$EXPECTED_JAR" -type f 2>/dev/null | head -1)
+            
+            # 정확한 파일명이 없으면 패턴으로 찾기
+            if [ -z "$JAR_FILE" ]; then
+              echo "Exact file not found, searching by pattern..."
+              JAR_FILE=$(find /home/ubuntu/cost-web-app/build/libs -name "cost-web-app-0.0.1-SNAPSHOT-*.jar" -type f 2>/dev/null | grep -v plain | head -1)
+            fi
+            
             if [ -z "$JAR_FILE" ]; then
               echo "Deployment numbered JAR not found, looking for regular JAR..."
               JAR_FILE=$(find /home/ubuntu/cost-web-app/build/libs -name "cost-web-app-*.jar" -type f ! -name "*-plain.jar" 2>/dev/null | head -1)
