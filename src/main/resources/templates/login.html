@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - Cost Web App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 50px 40px;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login-title {
+            color: #333;
+            font-size: 2.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            position: relative;
+            margin-bottom: 28px;
+        }
+
+        .form-label {
+            display: block;
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-input-icon {
+            position: absolute;
+            left: 16px;
+            width: 20px;
+            height: 20px;
+            color: #999;
+            pointer-events: none;
+            transition: color 0.3s;
+            z-index: 1;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 16px 16px 48px;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            font-size: 1em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(to bottom, #ffffff, #fafafa);
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .form-input:hover {
+            border-color: #d0d0d0;
+            background: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .form-input:focus + .form-input-icon,
+        .form-input:not(:placeholder-shown) + .form-input-icon {
+            color: #667eea;
+        }
+
+        .form-input::placeholder {
+            color: #bbb;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+
+        .form-input:focus::placeholder {
+            opacity: 0.5;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .remember-me label {
+            color: #333;
+            font-size: 0.95em;
+            cursor: pointer;
+        }
+
+        .login-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .login-button:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #6a3d8b 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+        }
+
+        .login-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background-color: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            text-align: center;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* 반응형 디자인 - 모바일 */
+        @media (max-width: 768px) {
+            .login-container {
+                padding: 40px 30px;
+            }
+
+            .login-title {
+                font-size: 1.8em;
+                margin-bottom: 30px;
+            }
+        }
+
+        /* 반응형 디자인 - 작은 모바일 */
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            .login-title {
+                font-size: 1.5em;
+                margin-bottom: 25px;
+            }
+
+        .form-input {
+            padding: 12px 14px;
+        }
+    }
+
+    /* SNS 로그인 스타일 */
+    .sns-divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 30px 0;
+        color: #999;
+        font-size: 0.9em;
+    }
+
+    .sns-divider::before,
+    .sns-divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .sns-divider span {
+        padding: 0 15px;
+    }
+
+    .sns-login-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .sns-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        background: white;
+        color: #333;
+        font-size: 0.95em;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .sns-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .sns-button:active {
+        transform: translateY(0);
+    }
+
+    .sns-icon {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    .sns-button.google {
+        background: white;
+        border-color: #dadce0;
+    }
+
+    .sns-button.google:hover {
+        background: #f8f9fa;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .sns-button.kakao {
+        background: #FEE500;
+        border-color: #FEE500;
+        color: #000000;
+    }
+
+    .sns-button.kakao:hover {
+        background: #FDD835;
+        box-shadow: 0 4px 12px rgba(254, 229, 0, 0.4);
+    }
+
+    .sns-button.kakao .sns-icon {
+        fill: #000000;
+    }
+
+    .sns-button.naver {
+        background: #03C75A;
+        border-color: #03C75A;
+        color: white;
+    }
+
+    .sns-button.naver:hover {
+        background: #02B350;
+        box-shadow: 0 4px 12px rgba(3, 199, 90, 0.3);
+    }
+
+    .sns-button.naver .sns-icon {
+        fill: white;
+    }
+
+    @media (max-width: 480px) {
+        .sns-button {
+            padding: 10px 14px;
+            font-size: 0.9em;
+        }
+
+        .sns-icon {
+            width: 18px;
+            height: 18px;
+        }
+    }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1 class="login-title">로그인</h1>
+        
+        <div class="error-message" id="errorMessage" th:if="${error}" th:text="${error}">
+            로그인에 실패했습니다.
+        </div>
+        
+        <form th:action="@{/login}" method="post" id="loginForm">
+            <div class="form-group">
+                <div class="form-input-wrapper">
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="form-input" 
+                        placeholder="ID" 
+                        required 
+                        autocomplete="username"
+                    />
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div class="form-input-wrapper">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        placeholder="Password" 
+                        required 
+                        autocomplete="current-password"
+                    />
+                </div>
+            </div>
+            
+            <div class="remember-me">
+                <input type="checkbox" id="rememberMe" name="rememberMe" />
+                <label for="rememberMe">로그인 정보 저장</label>
+            </div>
+            
+            <button type="submit" class="login-button">Sign in</button>
+        </form>
+        
+        <!-- SNS 로그인 구분선 -->
+        <div class="sns-divider">
+            <span>또는</span>
+        </div>
+        
+        <!-- SNS 로그인 버튼 -->
+        <div class="sns-login-container">
+            <button type="button" class="sns-button google" onclick="handleSnsLogin('google')">
+                <svg class="sns-icon" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                <span>Google로 로그인</span>
+            </button>
+            
+            <button type="button" class="sns-button kakao" onclick="handleSnsLogin('kakao')">
+                <svg class="sns-icon" viewBox="0 0 24 24" fill="#000000">
+                    <path d="M12 3C6.48 3 2 6.48 2 11c0 2.5 1.42 4.75 3.66 6.24L4 22l5.08-1.5c.66.18 1.35.28 2.05.28 5.52 0 10-3.48 10-7.78 0-4.52-4.48-8-10-8z"/>
+                </svg>
+                <span>Kakao로 로그인</span>
+            </button>
+            
+            <button type="button" class="sns-button naver" onclick="handleSnsLogin('naver')">
+                <svg class="sns-icon" viewBox="0 0 24 24">
+                    <path fill="#03C75A" d="M16.273 12.845L7.376 0H0v24h7.726V11.156L16.624 24H24V0h-7.727v12.845z"/>
+                </svg>
+                <span>Naver로 로그인</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // AJAX로 로드된 경우에는 이벤트 리스너를 추가하지 않음 (index.html에서 처리)
+        // 직접 접근한 경우에만 기본 동작 허용
+        if (window.location.pathname === '/login' && !window.frameElement) {
+            const form = document.getElementById('loginForm');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    // 기본 검증은 HTML5 required로 처리
+                    if (errorMessage) {
+                        errorMessage.classList.remove('show');
+                    }
+                });
+            }
+        }
+
+        // SNS 로그인 처리 함수 (전역 함수로 정의)
+        if (typeof handleSnsLogin === 'undefined') {
+            window.handleSnsLogin = function(provider) {
+                console.log(`${provider} 로그인 시도`);
+                // TODO: 실제 SNS 연동 로직 구현
+                // 예시:
+                // window.location.href = `/oauth2/authorization/${provider}`;
+                // 또는
+                // window.open(`/api/auth/${provider}`, '_blank', 'width=500,height=600');
+                
+                alert(`${provider} 로그인 기능은 준비 중입니다.`);
+            };
+        }
+    </script>
+</body>
+</html>
+
