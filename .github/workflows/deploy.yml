@@ -23,7 +23,8 @@ jobs:
       - name: Rename JAR with deployment number
         run: |
           DEPLOY_NUMBER=${{ github.run_number }}
-          JAR_FILE=$(ls build/libs/cost-web-app-*.jar | grep -v plain | head -1)
+          echo "=== Deployment number: $DEPLOY_NUMBER ==="
+          JAR_FILE=$(ls build/libs/cost-web-app-*.jar 2>/dev/null | grep -v plain | head -1)
           if [ -n "$JAR_FILE" ]; then
             NEW_NAME="cost-web-app-0.0.1-SNAPSHOT-${DEPLOY_NUMBER}.jar"
             mv "$JAR_FILE" "build/libs/$NEW_NAME"
@@ -32,12 +33,16 @@ jobs:
             echo "Deployment number: $DEPLOY_NUMBER"
           else
             echo "ERROR: JAR file not found for renaming"
+            ls -la build/libs/ || echo "build/libs directory not found"
             exit 1
           fi
       - name: Debug build folder
         run: |
           echo "=== build/libs directory structure ==="
-          ls -R build/libs || echo "build/libs not found"
+          ls -lh build/libs/*.jar || echo "No jar files found"
+          echo ""
+          echo "=== Files to deploy ==="
+          ls -lh build/libs/cost-web-app-0.0.1-SNAPSHOT-*.jar || echo "No deployment numbered files found"
 
       - name: Deploy to Lightsail Server
         uses: appleboy/scp-action@v0.1.7
@@ -45,7 +50,7 @@ jobs:
           host: ${{ secrets.EC2_HOST_DEV }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_DEV }}
-          source: build/libs/cost-web-app-*.jar
+          source: build/libs/cost-web-app-0.0.1-SNAPSHOT-*.jar
           target: /home/ubuntu/cost-web-app/
 
       - name: Setup and Restart Service on Server
@@ -57,17 +62,31 @@ jobs:
           script: |
             # 디버깅: 전송된 파일 확인
             echo "=== Checking transferred files ==="
+            echo "Files in root directory:"
             ls -la /home/ubuntu/cost-web-app/*.jar 2>/dev/null || echo "No jar files found in root"
+            echo ""
+            echo "All JAR files in cost-web-app (recursive):"
+            find /home/ubuntu/cost-web-app -name "*.jar" -type f 2>/dev/null | head -10 || echo "No jar files found"
             
             # JAR 파일을 올바른 위치로 이동
             mkdir -p /home/ubuntu/cost-web-app/build/libs
             
             # 기존 JAR 파일 모두 제거 (중복 방지)
+            # 오래된 중첩된 경로도 정리
+            rm -rf /home/ubuntu/cost-web-app/build/libs/build
             rm -f /home/ubuntu/cost-web-app/build/libs/*.jar
             
-            # 새 JAR 파일 찾기 (배포 번호가 포함된 JAR 파일)
+            # 새 JAR 파일 찾기 (배포 번호가 포함된 JAR 파일 우선)
             # 파일명 형식: cost-web-app-0.0.1-SNAPSHOT-{배포번호}.jar
-            JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "cost-web-app-*.jar" -type f 2>/dev/null | head -1)
+            echo ""
+            echo "=== Looking for deployment numbered JAR ==="
+            JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "cost-web-app-0.0.1-SNAPSHOT-*.jar" -type f 2>/dev/null | grep -v plain | head -1)
+            
+            # 배포 번호가 포함된 파일이 없으면 일반 파일 찾기
+            if [ -z "$JAR_SOURCE" ]; then
+              echo "Deployment numbered JAR not found, looking for regular JAR..."
+              JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "cost-web-app-*.jar" -type f ! -name "*-plain.jar" 2>/dev/null | head -1)
+            fi
             
             if [ -n "$JAR_SOURCE" ]; then
               echo "Found JAR file: $JAR_SOURCE"
@@ -75,11 +94,18 @@ jobs:
               mv "$JAR_SOURCE" /home/ubuntu/cost-web-app/build/libs/
               echo "JAR file moved to build/libs/"
             else
-              echo "WARNING: JAR file not found in root, checking build/libs/"
+              echo "WARNING: JAR file not found in root"
             fi
             
             # JAR 파일 확인 (최종 위치)
-            JAR_FILE=$(find /home/ubuntu/cost-web-app/build/libs -name "cost-web-app-*.jar" -type f 2>/dev/null | head -1)
+            # 배포 번호가 포함된 파일 우선, 없으면 일반 파일
+            echo ""
+            echo "=== Finding JAR file for service ==="
+            JAR_FILE=$(find /home/ubuntu/cost-web-app/build/libs -name "cost-web-app-0.0.1-SNAPSHOT-*.jar" -type f 2>/dev/null | grep -v plain | head -1)
+            if [ -z "$JAR_FILE" ]; then
+              echo "Deployment numbered JAR not found, looking for regular JAR..."
+              JAR_FILE=$(find /home/ubuntu/cost-web-app/build/libs -name "cost-web-app-*.jar" -type f ! -name "*-plain.jar" 2>/dev/null | head -1)
+            fi
             if [ -z "$JAR_FILE" ]; then
               echo "ERROR: JAR file not found in build/libs/"
               echo "Files in build/libs/:"
