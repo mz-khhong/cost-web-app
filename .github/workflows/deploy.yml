@@ -22,11 +22,17 @@ jobs:
         run: ./gradlew clean build -x test
       - name: Rename JAR with deployment number
         run: |
+          DEPLOY_NUMBER=${{ github.run_number }}
           JAR_FILE=$(ls build/libs/cost-web-app-*.jar | grep -v plain | head -1)
           if [ -n "$JAR_FILE" ]; then
-            NEW_NAME="cost-web-app-0.0.1-SNAPSHOT-${{ github.run_number }}.jar"
+            NEW_NAME="cost-web-app-0.0.1-SNAPSHOT-${DEPLOY_NUMBER}.jar"
             mv "$JAR_FILE" "build/libs/$NEW_NAME"
+            echo "Renamed from: $(basename $JAR_FILE)"
             echo "Renamed to: $NEW_NAME"
+            echo "Deployment number: $DEPLOY_NUMBER"
+          else
+            echo "ERROR: JAR file not found for renaming"
+            exit 1
           fi
       - name: Debug build folder
         run: |
