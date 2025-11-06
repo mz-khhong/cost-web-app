@@ -59,53 +59,63 @@ jobs:
           host: ${{ secrets.EC2_HOST_DEV }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_DEV }}
-          envs: DEPLOY_NUMBER=${{ github.run_number }}
           script: |
+            # 배포 번호 설정 (GitHub Actions에서 직접 주입)
+            DEPLOY_NUMBER="${{ github.run_number }}"
             echo "=== Deployment number: $DEPLOY_NUMBER ==="
             # 디버깅: 전송된 파일 확인
             echo "=== Checking transferred files ==="
             echo "Files in root directory:"
             ls -la /home/ubuntu/cost-web-app/*.jar 2>/dev/null || echo "No jar files found in root"
             echo ""
+            echo "Files in build/libs:"
+            ls -la /home/ubuntu/cost-web-app/build/libs/*.jar 2>/dev/null || echo "No jar files in build/libs"
+            echo ""
             echo "All JAR files in cost-web-app (recursive):"
             find /home/ubuntu/cost-web-app -name "*.jar" -type f 2>/dev/null | head -10 || echo "No jar files found"
             
-            # JAR 파일을 올바른 위치로 이동
-            mkdir -p /home/ubuntu/cost-web-app/build/libs
-            
-            # 기존 JAR 파일 모두 제거 (중복 방지)
-            # 오래된 중첩된 경로도 정리
+            # 오래된 중첩된 경로 정리
             rm -rf /home/ubuntu/cost-web-app/build/libs/build
-            rm -f /home/ubuntu/cost-web-app/build/libs/*.jar
             
             # 새 JAR 파일 찾기 (배포 번호가 포함된 JAR 파일 우선)
             # 파일명 형식: cost-web-app-0.0.1-SNAPSHOT-{배포번호}.jar
             echo ""
             echo "=== Looking for deployment numbered JAR (Number: $DEPLOY_NUMBER) ==="
             
-            # 배포 번호로 정확한 파일명 찾기
+            # 배포 번호로 정확한 파일명 찾기 (루트와 build/libs 모두 검색)
             EXPECTED_JAR="cost-web-app-0.0.1-SNAPSHOT-${DEPLOY_NUMBER}.jar"
-            JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "$EXPECTED_JAR" -type f 2>/dev/null | head -1)
+            JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 2 -name "$EXPECTED_JAR" -type f 2>/dev/null | grep -v plain | head -1)
             
             # 정확한 파일명이 없으면 패턴으로 찾기
             if [ -z "$JAR_SOURCE" ]; then
               echo "Exact file not found, searching by pattern..."
-              JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "cost-web-app-0.0.1-SNAPSHOT-*.jar" -type f 2>/dev/null | grep -v plain | head -1)
+              JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 2 -name "cost-web-app-0.0.1-SNAPSHOT-*.jar" -type f 2>/dev/null | grep -v plain | head -1)
             fi
             
             # 배포 번호가 포함된 파일이 없으면 일반 파일 찾기
             if [ -z "$JAR_SOURCE" ]; then
               echo "Deployment numbered JAR not found, looking for regular JAR..."
-              JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 1 -name "cost-web-app-*.jar" -type f ! -name "*-plain.jar" 2>/dev/null | head -1)
+              JAR_SOURCE=$(find /home/ubuntu/cost-web-app -maxdepth 2 -name "cost-web-app-*.jar" -type f ! -name "*-plain.jar" 2>/dev/null | head -1)
             fi
+            
+            # JAR 파일을 올바른 위치로 이동
+            mkdir -p /home/ubuntu/cost-web-app/build/libs
             
             if [ -n "$JAR_SOURCE" ]; then
               echo "Found JAR file: $JAR_SOURCE"
-              # 새 JAR 파일 이동
-              mv "$JAR_SOURCE" /home/ubuntu/cost-web-app/build/libs/
-              echo "JAR file moved to build/libs/"
+              # 기존 JAR 파일 제거 (현재 배포 번호 파일 제외)
+              find /home/ubuntu/cost-web-app/build/libs -name "cost-web-app-*.jar" -type f ! -name "$EXPECTED_JAR" -delete 2>/dev/null || true
+              
+              # 파일이 이미 build/libs에 있으면 그대로 사용, 아니면 이동
+              if [[ "$JAR_SOURCE" == *"/build/libs/"* ]]; then
+                echo "JAR file already in build/libs/"
+              else
+                # 새 JAR 파일 이동
+                mv "$JAR_SOURCE" /home/ubuntu/cost-web-app/build/libs/
+                echo "JAR file moved to build/libs/"
+              fi
             else
-              echo "WARNING: JAR file not found in root"
+              echo "WARNING: JAR file not found"
             fi
             
             # JAR 파일 확인 (최종 위치)
